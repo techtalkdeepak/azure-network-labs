@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "lab"
+    },
+    "location": {
+      "value": "australiaeast"
+    },
+    "hubVnetAddressPrefix": {
+      "value": "10.0.0.0/16"
+    },
+    "spoke1VnetAddressPrefix": {
+      "value": "10.1.0.0/16"
+    },
+    "spoke2VnetAddressPrefix": {
+      "value": "10.2.0.0/16"
+    },
+    "vmSize": {
+      "value": "Standard_B1s"
+    },
+    "adminUsername": {
+      "reference": {
+        "keyVault": null,
+        "secretName": null
+      },
+      "value": null
+    },
+    "adminPassword": {
+      "reference": {
+        "keyVault": null,
+        "secretName": null
+      },
+      "value": null
+    },
+    "tags": {
+      "value": {
+        "environment": "lab",
+        "project": "hub-spoke",
+        "region": "australiaeast",
+        "managedBy": "github-actions"
+      }
+    }
+  }
+}
