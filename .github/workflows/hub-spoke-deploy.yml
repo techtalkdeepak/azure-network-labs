@@ -46,7 +46,6 @@ jobs:
     name: Deploy — Hub and Spoke
     runs-on: ubuntu-latest
     needs: validate           # only runs if validate passes
-    environment: lab          # can add approval gate here later
 
     steps:
       - name: Checkout repo
