@@ -82,7 +82,7 @@ module rtSpoke2 'modules/routeTable.bicep' = {
   }
 }
 
-// ── Spoke VNets (after route tables) ─────────────────────────
+// ── Spoke VNets (clean — no route table reference) ───────────
 
 module spoke1Vnet 'modules/vnet.bicep' = {
   name: 'spoke1Vnet'
@@ -92,7 +92,6 @@ module spoke1Vnet 'modules/vnet.bicep' = {
     location: location
     tags: tags
     addressPrefix: spoke1VnetAddressPrefix
-    routeTableId: rtSpoke1.outputs.routeTableId
     subnets: [
       { name: 'snet-workload-1' addressPrefix: '10.1.0.0/24' }
       { name: 'snet-workload-2' addressPrefix: '10.1.1.0/24' }
@@ -108,12 +107,59 @@ module spoke2Vnet 'modules/vnet.bicep' = {
     location: location
     tags: tags
     addressPrefix: spoke2VnetAddressPrefix
-    routeTableId: rtSpoke2.outputs.routeTableId
     subnets: [
       { name: 'snet-workload-1' addressPrefix: '10.2.0.0/24' }
       { name: 'snet-workload-2' addressPrefix: '10.2.1.0/24' }
     ]
   }
+}
+
+// ── Route Table Associations (after VNets AND route tables) ──
+
+module rtAssocSpoke1Snet1 'modules/subnetRouteAssociation.bicep' = {
+  name: 'rtAssocSpoke1Snet1'
+  scope: rg
+  params: {
+    vnetName: spoke1Vnet.outputs.vnetName
+    subnetName: 'snet-workload-1'
+    subnetAddressPrefix: '10.1.0.0/24'
+    routeTableId: rtSpoke1.outputs.routeTableId
+  }
+}
+
+module rtAssocSpoke1Snet2 'modules/subnetRouteAssociation.bicep' = {
+  name: 'rtAssocSpoke1Snet2'
+  scope: rg
+  params: {
+    vnetName: spoke1Vnet.outputs.vnetName
+    subnetName: 'snet-workload-2'
+    subnetAddressPrefix: '10.1.1.0/24'
+    routeTableId: rtSpoke1.outputs.routeTableId
+  }
+  dependsOn: [rtAssocSpoke1Snet1]
+}
+
+module rtAssocSpoke2Snet1 'modules/subnetRouteAssociation.bicep' = {
+  name: 'rtAssocSpoke2Snet1'
+  scope: rg
+  params: {
+    vnetName: spoke2Vnet.outputs.vnetName
+    subnetName: 'snet-workload-1'
+    subnetAddressPrefix: '10.2.0.0/24'
+    routeTableId: rtSpoke2.outputs.routeTableId
+  }
+}
+
+module rtAssocSpoke2Snet2 'modules/subnetRouteAssociation.bicep' = {
+  name: 'rtAssocSpoke2Snet2'
+  scope: rg
+  params: {
+    vnetName: spoke2Vnet.outputs.vnetName
+    subnetName: 'snet-workload-2'
+    subnetAddressPrefix: '10.2.1.0/24'
+    routeTableId: rtSpoke2.outputs.routeTableId
+  }
+  dependsOn: [rtAssocSpoke2Snet1]
 }
 
 // ── VNet Peerings ────────────────────────────────────────────
@@ -174,7 +220,7 @@ module vmSpoke1 'modules/linuxVm.bicep' = {
     vmSize: vmSize
     adminUsername: adminUsername
     adminPassword: adminPassword
-    subnetId: spoke1Vnet.outputs.subnet1Id
+    subnetId: rtAssocSpoke1Snet1.outputs.subnetId
   }
 }
 
@@ -188,7 +234,7 @@ module vmSpoke2 'modules/linuxVm.bicep' = {
     vmSize: vmSize
     adminUsername: adminUsername
     adminPassword: adminPassword
-    subnetId: spoke2Vnet.outputs.subnet1Id
+    subnetId: rtAssocSpoke2Snet1.outputs.subnetId
   }
 }
 

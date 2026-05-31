@@ -1,11 +1,8 @@
-// modules/vnet.bicep
-
 param name string
 param location string
 param tags object
 param addressPrefix string
 param subnets array
-param routeTableId string = ''   // optional — empty means no route table
 
 resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
   name: name
@@ -19,7 +16,6 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
       name: subnet.name
       properties: {
         addressPrefix: subnet.addressPrefix
-        routeTable: !empty(routeTableId) ? { id: routeTableId } : null
       }
     }]
   }
