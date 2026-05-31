@@ -44,11 +44,10 @@ param tags object = {
 var prefix = 'hs-${environmentName}'
 var rgName = 'rg-${prefix}-${location}'
 
-// Subnets
-var hubFirewallSubnet     = '10.0.0.0/26'   // AzureFirewallSubnet — must be /26 minimum
-var hubFirewallMgmtSubnet = '10.0.0.64/26'  // AzureFirewallManagementSubnet
-var hubBastionSubnet      = '10.0.1.0/27'   // AzureBastionSubnet — optional, reserved
-var hubGatewaySubnet      = '10.0.2.0/27'   // GatewaySubnet — reserved for future VPN
+var hubFirewallSubnet     = '10.0.0.0/26'
+var hubFirewallMgmtSubnet = '10.0.0.64/26'
+var hubBastionSubnet      = '10.0.1.0/27'
+var hubGatewaySubnet      = '10.0.2.0/27'
 
 var spoke1Subnet1 = '10.1.0.0/24'
 var spoke1Subnet2 = '10.1.1.0/24'
@@ -106,7 +105,46 @@ module hubVnet 'modules/vnet.bicep' = {
   }
 }
 
-// ── Spoke 1 VNet ─────────────────────────────────────────────
+// ── Azure Firewall ───────────────────────────────────────────
+// Must deploy before spokes so we have the private IP for route tables
+
+module firewall 'modules/firewall.bicep' = {
+  name: 'hubFirewall'
+  scope: rg
+  params: {
+    name: 'afw-${prefix}-hub'
+    location: location
+    tags: tags
+    hubVnetId: hubVnet.outputs.vnetId
+  }
+}
+
+// ── Route Tables ─────────────────────────────────────────────
+// Created after firewall so we have the private IP
+
+module rtSpoke1 'modules/routeTable.bicep' = {
+  name: 'rtSpoke1'
+  scope: rg
+  params: {
+    name: 'rt-${prefix}-spoke1'
+    location: location
+    tags: tags
+    firewallPrivateIp: firewall.outputs.firewallPrivateIp
+  }
+}
+
+module rtSpoke2 'modules/routeTable.bicep' = {
+  name: 'rtSpoke2'
+  scope: rg
+  params: {
+    name: 'rt-${prefix}-spoke2'
+    location: location
+    tags: tags
+    firewallPrivateIp: firewall.outputs.firewallPrivateIp
+  }
+}
+
+// ── Spoke VNets (deployed after route tables) ─────────────────
 
 module spoke1Vnet 'modules/vnet.bicep' = {
   name: 'spoke1Vnet'
@@ -116,6 +154,7 @@ module spoke1Vnet 'modules/vnet.bicep' = {
     location: location
     tags: tags
     addressPrefix: spoke1VnetAddressPrefix
+    routeTableId: rtSpoke1.outputs.routeTableId
     subnets: [
       {
         name: 'snet-workload-1'
@@ -129,8 +168,6 @@ module spoke1Vnet 'modules/vnet.bicep' = {
   }
 }
 
-// ── Spoke 2 VNet ─────────────────────────────────────────────
-
 module spoke2Vnet 'modules/vnet.bicep' = {
   name: 'spoke2Vnet'
   scope: rg
@@ -139,6 +176,7 @@ module spoke2Vnet 'modules/vnet.bicep' = {
     location: location
     tags: tags
     addressPrefix: spoke2VnetAddressPrefix
+    routeTableId: rtSpoke2.outputs.routeTableId
     subnets: [
       {
         name: 'snet-workload-1'
@@ -152,23 +190,8 @@ module spoke2Vnet 'modules/vnet.bicep' = {
   }
 }
 
-// ── Azure Firewall ───────────────────────────────────────────
-
-module firewall 'modules/firewall.bicep' = {
-  name: 'hubFirewall'
-  scope: rg
-  params: {
-    name: 'afw-${prefix}-hub'
-    location: location
-    tags: tags
-    hubVnetName: hubVnet.outputs.vnetName
-    hubVnetId: hubVnet.outputs.vnetId
-  }
-}
-
 // ── VNet Peerings ────────────────────────────────────────────
 
-// Hub → Spoke 1
 module peerHubToSpoke1 'modules/peering.bicep' = {
   name: 'peerHubToSpoke1'
   scope: rg
@@ -176,13 +199,10 @@ module peerHubToSpoke1 'modules/peering.bicep' = {
     localVnetName: hubVnet.outputs.vnetName
     remoteVnetId: spoke1Vnet.outputs.vnetId
     peeringName: 'peer-hub-to-spoke1'
-    allowGatewayTransit: false
-    useRemoteGateways: false
     allowForwardedTraffic: true
   }
 }
 
-// Spoke 1 → Hub
 module peerSpoke1ToHub 'modules/peering.bicep' = {
   name: 'peerSpoke1ToHub'
   scope: rg
@@ -190,13 +210,10 @@ module peerSpoke1ToHub 'modules/peering.bicep' = {
     localVnetName: spoke1Vnet.outputs.vnetName
     remoteVnetId: hubVnet.outputs.vnetId
     peeringName: 'peer-spoke1-to-hub'
-    allowGatewayTransit: false
-    useRemoteGateways: false
     allowForwardedTraffic: true
   }
 }
 
-// Hub → Spoke 2
 module peerHubToSpoke2 'modules/peering.bicep' = {
   name: 'peerHubToSpoke2'
   scope: rg
@@ -204,13 +221,10 @@ module peerHubToSpoke2 'modules/peering.bicep' = {
     localVnetName: hubVnet.outputs.vnetName
     remoteVnetId: spoke2Vnet.outputs.vnetId
     peeringName: 'peer-hub-to-spoke2'
-    allowGatewayTransit: false
-    useRemoteGateways: false
     allowForwardedTraffic: true
   }
 }
 
-// Spoke 2 → Hub
 module peerSpoke2ToHub 'modules/peering.bicep' = {
   name: 'peerSpoke2ToHub'
   scope: rg
@@ -218,47 +232,7 @@ module peerSpoke2ToHub 'modules/peering.bicep' = {
     localVnetName: spoke2Vnet.outputs.vnetName
     remoteVnetId: hubVnet.outputs.vnetId
     peeringName: 'peer-spoke2-to-hub'
-    allowGatewayTransit: false
-    useRemoteGateways: false
     allowForwardedTraffic: true
-  }
-}
-
-// ── Route Tables (force traffic through firewall) ─────────────
-
-module rtSpoke1 'modules/routeTable.bicep' = {
-  name: 'rtSpoke1'
-  scope: rg
-  params: {
-    name: 'rt-${prefix}-spoke1'
-    location: location
-    tags: tags
-    firewallPrivateIp: firewall.outputs.firewallPrivateIp
-    subnetIds: [
-      spoke1Vnet.outputs.subnet1Id
-      spoke1Vnet.outputs.subnet2Id
-    ]
-    vnetName: spoke1Vnet.outputs.vnetName
-    subnet1Name: 'snet-workload-1'
-    subnet2Name: 'snet-workload-2'
-  }
-}
-
-module rtSpoke2 'modules/routeTable.bicep' = {
-  name: 'rtSpoke2'
-  scope: rg
-  params: {
-    name: 'rt-${prefix}-spoke2'
-    location: location
-    tags: tags
-    firewallPrivateIp: firewall.outputs.firewallPrivateIp
-    subnetIds: [
-      spoke2Vnet.outputs.subnet1Id
-      spoke2Vnet.outputs.subnet2Id
-    ]
-    vnetName: spoke2Vnet.outputs.vnetName
-    subnet1Name: 'snet-workload-1'
-    subnet2Name: 'snet-workload-2'
   }
 }
 
