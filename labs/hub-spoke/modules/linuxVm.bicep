@@ -1,5 +1,5 @@
 // modules/linuxVm.bicep
-// Boot diagnostics enabled → unlocks Serial Console in Azure Portal
+// Boot diagnostics uses Azure managed storage (recommended)
 
 param name string
 param location string
@@ -9,9 +9,6 @@ param adminUsername string
 @secure()
 param adminPassword string
 param subnetId string
-param diagStorageUri string
-
-// ── Network Interface ────────────────────────────────────────
 
 resource nic 'Microsoft.Network/networkInterfaces@2023-05-01' = {
   name: '${name}-nic'
@@ -29,11 +26,9 @@ resource nic 'Microsoft.Network/networkInterfaces@2023-05-01' = {
         }
       }
     ]
-    enableAcceleratedNetworking: false  // B1s does not support accelerated networking
+    enableAcceleratedNetworking: false
   }
 }
-
-// ── Virtual Machine ──────────────────────────────────────────
 
 resource vm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
   name: name
@@ -48,8 +43,8 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
       adminUsername: adminUsername
       adminPassword: adminPassword
       linuxConfiguration: {
-        disablePasswordAuthentication: false  // password auth enabled as requested
-        provisionVMAgent: true                // required for Serial Console
+        disablePasswordAuthentication: false
+        provisionVMAgent: true
       }
     }
     storageProfile: {
@@ -66,7 +61,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
         managedDisk: {
           storageAccountType: 'Standard_LRS'
         }
-        deleteOption: 'Delete'    // clean up disk when VM is deleted
+        deleteOption: 'Delete'
       }
     }
     networkProfile: {
@@ -74,7 +69,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
         {
           id: nic.id
           properties: {
-            deleteOption: 'Delete'  // clean up NIC when VM is deleted
+            deleteOption: 'Delete'
           }
         }
       ]
@@ -82,7 +77,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
     diagnosticsProfile: {
       bootDiagnostics: {
         enabled: true
-        storageUri: diagStorageUri  // enables Serial Console in Azure Portal
+        // No storageUri = Azure managed storage account (recommended)
       }
     }
   }
