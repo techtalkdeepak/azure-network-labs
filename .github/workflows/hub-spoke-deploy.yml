@@ -14,7 +14,7 @@ permissions:
 
 env:
   LOCATION: australiaeast
-  DEPLOYMENT_NAME: hub-spoke-${{ github.run_number }}
+  DEPLOYMENT_NAME: hub-spoke-${{ github.run_number }}-${{ github.run_attempt }}
 
 jobs:
   validate:
