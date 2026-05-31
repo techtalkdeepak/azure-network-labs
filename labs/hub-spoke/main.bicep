@@ -37,10 +37,22 @@ module hubVnet 'modules/vnet.bicep' = {
     tags: tags
     addressPrefix: hubVnetAddressPrefix
     subnets: [
-      { name: 'AzureFirewallSubnet'           addressPrefix: '10.0.0.0/26'  }
-      { name: 'AzureFirewallManagementSubnet' addressPrefix: '10.0.0.64/26' }
-      { name: 'AzureBastionSubnet'            addressPrefix: '10.0.1.0/27'  }
-      { name: 'GatewaySubnet'                 addressPrefix: '10.0.2.0/27'  }
+      {
+        name: 'AzureFirewallSubnet'
+        addressPrefix: '10.0.0.0/26'
+      }
+      {
+        name: 'AzureFirewallManagementSubnet'
+        addressPrefix: '10.0.0.64/26'
+      }
+      {
+        name: 'AzureBastionSubnet'
+        addressPrefix: '10.0.1.0/27'
+      }
+      {
+        name: 'GatewaySubnet'
+        addressPrefix: '10.0.2.0/27'
+      }
     ]
   }
 }
@@ -93,8 +105,14 @@ module spoke1Vnet 'modules/vnet.bicep' = {
     tags: tags
     addressPrefix: spoke1VnetAddressPrefix
     subnets: [
-      { name: 'snet-workload-1' addressPrefix: '10.1.0.0/24' }
-      { name: 'snet-workload-2' addressPrefix: '10.1.1.0/24' }
+      {
+        name: 'snet-workload-1'
+        addressPrefix: '10.1.0.0/24'
+      }
+      {
+        name: 'snet-workload-2'
+        addressPrefix: '10.1.1.0/24'
+      }
     ]
   }
 }
@@ -108,8 +126,14 @@ module spoke2Vnet 'modules/vnet.bicep' = {
     tags: tags
     addressPrefix: spoke2VnetAddressPrefix
     subnets: [
-      { name: 'snet-workload-1' addressPrefix: '10.2.0.0/24' }
-      { name: 'snet-workload-2' addressPrefix: '10.2.1.0/24' }
+      {
+        name: 'snet-workload-1'
+        addressPrefix: '10.2.0.0/24'
+      }
+      {
+        name: 'snet-workload-2'
+        addressPrefix: '10.2.1.0/24'
+      }
     ]
   }
 }
